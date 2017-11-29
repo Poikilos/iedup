@@ -1,4 +1,5 @@
 # iedup
+IntegratorEdu Ping - pings your self-hosted IntegratorEdu instance to track hardware
 
 ## Changes
 * (2017-11-29) initial commit
@@ -7,6 +8,7 @@
 * regularly get config from server (the following variables):
 	* push_interval_ms
 	* pull_interval_ms
+	* update_interval_hours
 	* web_service_base_url
 
 ## Authors
