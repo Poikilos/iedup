@@ -1,5 +1,5 @@
 # iedup
-IntegratorEdu Ping - pings your self-hosted IntegratorEdu instance to track hardware
+IntegratorEdu Ping: "ping" (send telemetry to) your self-hosted IntegratorEdu instance to track hardware
 
 ## Changes
 * (2017-11-29) initial commit
