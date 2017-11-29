@@ -24,11 +24,13 @@ using System.IO;
 using NativeWifi;
 using System.Net.NetworkInformation;
 using System.Configuration.Install;  // ManagedInstallerClass etc
+using System.Web; //HttpContext.Request etc
 
 namespace iedu
 {
 	public class iedup : ServiceBase
 	{
+		private static Dictionary<string,string> settings = null;
 		private const bool debug_enable = true;
 		public const string MyServiceName = "iedup";
 		private static System.Timers.Timer ss_timer = null;
@@ -67,7 +69,10 @@ namespace iedu
 			string text_path = Path.Combine(temp, text_name);
 			string loggedOnUserName = null;
 			Dictionary<string, string> body = new Dictionary<string, string>();
-			
+			body.Add("MachineName", Environment.MachineName);
+			//string IP = Request.UserHostName;
+			string HostName = IEdu.GetHostName();  // DetermineHostName(IP);
+			body.Add("HostName", HostName);
 			StreamWriter outs = null;
 			if (debug_enable) outs = new StreamWriter(text_path);
 			
@@ -97,8 +102,6 @@ namespace iedu
         		int collected_count = 0;
 	            foreach (WlanClient.WlanInterface wlanIface in client.Interfaces)
 	            {
-	
-	                
 	                string local_mac = "";
 	                //System.Net.NetworkInformation.PhysicalAddress
 	                PhysicalAddress pa = wlanIface.NetworkInterface.GetPhysicalAddress();
@@ -139,7 +142,14 @@ namespace iedu
 	        {
 	            if (outs!=null) outs.WriteLine(ex.Message);
 	        }
-			
+	        if (settings.ContainsKey("ping_url") && settings["ping_url"].Length>0) {
+	        	string response = IEdu.html_post(settings["ping_url"], body);
+	        	if (outs!=null) {
+	        		outs.WriteLine("posted to "+settings["ping_url"]);
+	        		outs.WriteLine("no response needed: '"+response+"'");
+	        	}
+	        }
+	        else if (outs!=null) outs.WriteLine("missing ping_url in capture_data");
 	        try{
 				if (outs!=null) outs.Close();
 				if (debug_enable) Thread.Sleep(500);  // wait for file
@@ -187,7 +197,44 @@ namespace iedu
 		/// </summary>
 		protected override void OnStart(string[] args)
 		{
-			// TODO: Add start code here (if required) to start your service.
+			settings = new Dictionary<string, string>();
+			string settings_path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "iedup");
+			if (File.Exists(settings_path)) {
+				StreamReader ins = new StreamReader(settings_path);
+				string line;
+				//defaults:
+				while ( (line=ins.ReadLine()) != null ) {
+					string line_trim = line.Trim();
+					if (line_trim.Length>0) {
+						if (!line_trim.StartsWith("#")) {
+							int ao_i = line_trim.IndexOf(":");
+							if (ao_i>-1) {
+								string name = line.Substring(0,ao_i).Trim();
+								string val = line.Substring(ao_i+1).Trim();
+								if (val.Length>1 && val.StartsWith("\"") && val.EndsWith("\"")) {
+									val = val.Substring(1,val.Length-2);
+								}
+								else if (val.Length>1 && val.StartsWith("'") && val.EndsWith("'")) {
+									val = val.Substring(1,val.Length-2);
+								}
+								if (name!="") {
+									if (settings.ContainsKey(name)) settings[name] = val;
+									else settings.Add(name, val);
+								}
+							}
+						}
+					}
+				}
+				ins.Close();
+			}
+			timers_enable = true;
+			ss_timer = new System.Timers.Timer(debug_enable?5000:30000);  // 10000ms is 10s
+			ss_timer.AutoReset = true;  // loop
+			//ss_timer.Elapsed += ss_timer_ElapsedAsync;  // ss_timer.Elapsed += async (sender, arguments) => await ss_timer_Elapsed(sender, arguments);
+			ss_timer.Elapsed += ss_timer_ElapsedSync;
+			
+			ss_timer.Enabled = true;  // default is false
+			ss_timer.Start();
 		}
 		
 		/// <summary>
@@ -195,7 +242,9 @@ namespace iedu
 		/// </summary>
 		protected override void OnStop()
 		{
-			// TODO: Add tear-down code here (if required) to stop your service.
+			timers_enable = false;
+			ss_timer.Stop();
+			ss_timer = null;
 		}
 	}
 }
