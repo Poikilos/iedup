@@ -1,0 +1,6 @@
+#this settings.yml file must go in iedup folder in common application data (such as on Windows: C:\ProgramData\iedup\)
+ping_url: 'http://example.com/tp'
+form_method: POST
+#ping_url: 'http://example.com/tr'
+#form_method: GET
+#ping_url: 'http://192.212.100.31/t'

@@ -62,6 +62,7 @@
       <Link>IEdu.cs</Link>
     </Compile>
     <Compile Include="iedup.cs" />
+    <Compile Include="ProcessAsCurrentUser.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="ProjectInstaller.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

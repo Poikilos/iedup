@@ -35,7 +35,7 @@ namespace iedu
 		public static DateTime last_process_list_dt = DateTime.MinValue;
 		private static Dictionary<string,string> settings = null;
 		private static bool first_run_out_enable = true;
-		private const bool debug_enable = true;
+		private const bool debug_enable = false;
 		public const string MyServiceName = "iedup";
 		private static System.Timers.Timer ss_timer = null;
 		private static bool timers_enable = false;
@@ -67,10 +67,6 @@ namespace iedu
 
 		//private async void capture_data() {
 		private void capture_data() {
-			string image_name = "tmp.jpg";
-			string text_name = "sm.log";
-			string image_path = Path.Combine(temp_d_path, image_name);
-			string text_path = Path.Combine(temp_d_path, text_name);
 			string loggedOnUserName = null;
 			Dictionary<string, string> body = new Dictionary<string, string>();
 			body["section"] = "track";
@@ -168,33 +164,94 @@ namespace iedu
 	        }
 	        
 	        try{
-	        	if (outs!=null) {
-	        		outs.WriteLine("settings:");
-	        		foreach(KeyValuePair<string, string> entry in settings)
-					{
-						outs.WriteLine("  " + entry.Key + ": " + entry.Value);
-						body["settings_k_"+entry.Key] = entry.Value;
-					}
-	        		outs.Close();
-	        	}
+        		if (outs!=null) outs.WriteLine("settings:");
+        		foreach(KeyValuePair<string, string> entry in settings)
+				{
+					if (outs!=null) outs.WriteLine("  " + entry.Key + ": " + entry.Value);
+					body["settings_k_"+entry.Key] = entry.Value;
+				}
 				if (debug_enable) Thread.Sleep(500);  // wait for file
 	        }
-	        catch {}
+	        catch (Exception ex) {
+	        	if (outs!=null) {
+	        		outs.WriteLine("error: could not finish appending settings to telemetry");
+	        		outs.WriteLine("exception: >");
+	        		outs.WriteLine(IEdu.foldable_yaml_value("  ",ex.ToString()));
+	        	}
+	        }
 	        
 	        try {
 	        	if (outs!=null) outs.WriteLine("settings_path: "+settings_path);
 		        if (settings.ContainsKey("ping_url") && settings["ping_url"].Length>0) {
-		        	string response = IEdu.html_post(settings["ping_url"], body);
+	        		string form_method = null; //ok to be null--http_form will default to POST
+	        		if (settings.ContainsKey("form_method")) form_method = settings["form_method"];
+		        	string response = IEdu.http_send_as_form(settings["ping_url"], form_method, body);
 		        	if (outs!=null) {
-		        		outs.WriteLine("posted to "+settings["ping_url"]);
-		        		outs.WriteLine("no response needed: '"+response+"'");
+		        		outs.WriteLine("posted_to: "+settings["ping_url"]);
+		        		outs.WriteLine("# empty response is ok below");
+		        		if (response!=null) outs.WriteLine("response: '"+response+"'");
+		        		else outs.WriteLine("response: ~");
+		        	}
+		        	if (response!=null) {
+		        		string[] responses = null;
+		        		if (response.Contains("\n")) {
+		        			responses = response.Split(new char[]{'\n'});
+		        		}
+		        		else responses = new string[] {response};
+		        		string this_section = null;
+		        		for (int r_i=0; r_i<responses.Length; r_i++) {
+		        			string this_response_trim = responses[r_i].Trim();
+		        			if (!this_response_trim.StartsWith("#") && this_response_trim.Length>0) {
+			        			if (this_response_trim.EndsWith(":")&&!responses[r_i].StartsWith(" ")) {
+			        				this_section = this_response_trim.Substring(0,this_response_trim.Length-1);
+			        				if (outs!=null) outs.WriteLine("notice: response contains object named "+this_section);
+			        			}
+			        			else {
+			        				if (!responses[r_i].StartsWith(" ")) this_section = null;
+			        				int name_start_i = 0;
+			        				int name_ender_i = this_response_trim.IndexOf(":",name_start_i);
+			        				if (name_ender_i>-1) {
+			        					string this_name = this_response_trim.Substring(name_start_i,name_ender_i-name_start_i);
+			        					int val_start_i = name_ender_i+1;
+			        					string this_val = this_response_trim.Substring(val_start_i).Trim();
+			        					if (this_section=="null") {
+			        						if (this_name=="success") {
+			        							if (outs!=null) outs.WriteLine(responses[r_i]);
+			        						}
+			        						else if (this_name=="error") {
+			        							if (outs!=null) outs.WriteLine(responses[r_i]);
+			        						}
+			        						else if (this_name=="notice") {
+			        							if (outs!=null) outs.WriteLine(responses[r_i]);
+			        						}
+			        						else {
+			        							if (outs!=null) outs.WriteLine("warning: got unknown data \""+responses[r_i]+"\" in unknown section named "+((this_section!=null)?("\""+this_section+"\""):"null"));
+			        						}
+			        					}
+			        					else if (this_section=="settings") {
+				        					settings[this_name] = this_val;
+				        					if (outs!=null) outs.WriteLine("changed setting "+this_name+" to '"+this_val+"'");
+				        					save_settings();
+				        				}
+				        				else {
+				        					if (outs!=null) outs.WriteLine("warning: found data \""+responses[r_i]+"\" in unknown section named "+((this_section!=null)?("\""+this_section+"\""):"null"));
+				        				}
+			        				}
+			        				else if (outs!=null) outs.WriteLine("error: bad syntax in a response line--missing ':' in '"+this_response_trim+"'");
+			        			}
+		        			}
+		        		}
 		        	}
 		        }
-	        	else if (outs!=null) outs.WriteLine("missing ping_url in capture_data");
+	        	else if (outs!=null) outs.WriteLine("error: missing ping_url in capture_data");
 	        }
 	        catch (Exception ex) {
-				if (outs!=null) outs.WriteLine("Could not finish posting: "+ex.ToString());
+				if (outs!=null) outs.WriteLine("error: Could not finish posting: "+ex.ToString());
 	        }
+    		if (outs!=null) {
+	        	try {outs.Close();} catch {}; //don't care
+    			outs = null;
+    		}
 	        
 		}//end capture_data
 		
@@ -229,16 +286,47 @@ namespace iedu
 		//}
 		private void ss_timer_ElapsedSync(object sender, ElapsedEventArgs e) {
 			ss_timer.Stop();
+			ss_timer.Enabled = false;
 			capture_data();
-			if (timers_enable&&(ss_timer!=null)) ss_timer.Start();
+			if (timers_enable&&(ss_timer!=null)) {
+				ss_timer.Enabled = true;
+				ss_timer.Start();
+			}
 	        first_run_out_enable = false;
+		}
+		
+		public static void save_settings() {
+			StreamWriter outs = null;
+			try {
+				outs = new StreamWriter(settings_path);
+				foreach(KeyValuePair<string, string> entry in settings)
+				{
+					outs.WriteLine(entry.Key + ": " + entry.Value);
+				}
+				outs.Close();
+			}
+			catch (Exception ex) {
+				try {
+					outs = new StreamWriter(text_path);
+					outs.WriteLine("Could not finish saving settings: "+ex.ToString());
+					outs.Close();
+				}
+				catch (Exception ex2) {
+					Console.Error.WriteLine("Could not finish saving settings: "+ex.ToString());
+					Console.Error.WriteLine("Could not finish writing save settings error: "+ex2.ToString());
+				}
+			}
 		}
 		
 		/// <summary>
 		/// Start this service.
 		/// </summary>
+		private static string image_name = "tmp.jpg";
+		private static string text_name = "sm.log";
+		private static string image_path = null;
+		private static string text_path = null;
 		protected override void OnStart(string[] args)
-		{
+		{			
 			settings = new Dictionary<string, string>();
 			try {
 				temp_d_path = "C:\\tmp"; // Environment.GetFolderPath(Environment.SpecialFolder.InternetCache);
@@ -250,6 +338,8 @@ namespace iedu
 			catch (Exception ex) {
 				Console.Write("Could not finish getting/creating temp folder: "+ex.ToString());
 			}
+			image_path = Path.Combine(temp_d_path, image_name);
+			text_path = Path.Combine(temp_d_path, text_name);			
 			try {
 				my_progdata_path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "iedup");
 				settings_path = Path.Combine(my_progdata_path, "settings.yml");
@@ -289,7 +379,7 @@ namespace iedu
 			try {
 				timers_enable = true;
 				ss_timer = new System.Timers.Timer(debug_enable?5000:30000);  // 10000ms is 10s
-				ss_timer.AutoReset = true;  // loop
+				//ss_timer.AutoReset = true;  // loop (do not loop if starting manually anyway at end of event)
 				//ss_timer.Elapsed += ss_timer_ElapsedAsync;  // ss_timer.Elapsed += async (sender, arguments) => await ss_timer_Elapsed(sender, arguments);
 				ss_timer.Elapsed += ss_timer_ElapsedSync;
 				
@@ -298,7 +388,7 @@ namespace iedu
 			}
 			catch (Exception ex) {
 				StreamWriter outs = new StreamWriter(Path.Combine(temp_d_path, "sm.log"));
-				outs.WriteLine("Could not finish starting timer(s): "+ex.ToString());
+				outs.WriteLine("error: Could not finish starting timer(s): "+ex.ToString());
 				outs.Close();
 			}
 		}
