@@ -11,4 +11,5 @@ echo * in "Log On" tab:
 echo   * change "Log on as" to "Local System account"
 echo   * "Allow service to interact with the desktop": yes
 echo * OK, right-click the service, Start.
+echo * Add an exception to your anti-virus software for %THISNAME%
 pause
