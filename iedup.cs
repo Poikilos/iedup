@@ -255,27 +255,36 @@ namespace iedu
 	        
 		}//end capture_data
 		
-		private void install_software() {
+		private void install_sibling() {
 			string s_name_noext = "iedusm";  // install the OTHER program not this one (for update)
-			string s_path = IEdu.get_service_path(s_name_noext);
+			string s_path = IEdu.get_software_destination_file_path(s_name_noext, false);
 			
-			//see <https://stackoverflow.com/questions/2072288/installing-windows-service-programmatically>:
-            ManagedInstallerClass.InstallHelper(new string[] { s_path });
-        	//starting it as per codemonkey from <https://stackoverflow.com/questions/1036713/automatically-start-a-windows-service-on-install>:
-        	//results in access denied (same if done manually, unless "Log on as" is changed from LocalService to Local System
-			//serviceInstaller
-        	//using (ServiceController sc = new ServiceController(serviceInstaller.ServiceName))
-        	//using (ServiceController sc = new ServiceController("iedusm"))
-		    //{
-		    //     sc.Start();
-		    //}
+			bool install_as_service_enable = true;
+			if (s_path==null) {
+				//TODO: copy iedusm from somewhere
+				s_path = IEdu.get_software_destination_file_path(s_name_noext, false);
+			}
+			if (s_path!=null) {
+				//see <https://stackoverflow.com/questions/2072288/installing-windows-service-programmatically>:
+	            ManagedInstallerClass.InstallHelper(new string[] { s_path });
+	        	//starting it as per codemonkey from <https://stackoverflow.com/questions/1036713/automatically-start-a-windows-service-on-install>:
+	        	//results in access denied (same if done manually, unless "Log on as" is changed from LocalService to Local System
+				//serviceInstaller
+	        	//using (ServiceController sc = new ServiceController(serviceInstaller.ServiceName))
+	        	//using (ServiceController sc = new ServiceController("iedusm"))
+			    //{
+			    //     sc.Start();
+			    //}
+			    //TODO: finish this asdf
+			}
 		}
 		
-		private void uninstall_software() {
+		private void uninstall_sibling() {
 			string s_name_noext = "iedusm"; //uninstall the OTHER program not this one (for update)
-			string s_path = IEdu.get_service_path(s_name_noext);
+			string s_path = IEdu.get_software_destination_file_path(s_name_noext, false);
 			
-			ManagedInstallerClass.InstallHelper(new string[] { "/u", s_path });
+			if (s_path!=null) ManagedInstallerClass.InstallHelper(new string[] { "/u", s_path });
+			else Console.Error.WriteLine("iedup WARNING: "+s_path+" was already uninstalled.");
 		}
 		
 		//private async Task ss_timer_Elapsed//would normally be a Task but ok not since is event --see https://stackoverflow.com/questions/39260486/is-it-okay-to-attach-async-event-handler-to-system-timers-timer

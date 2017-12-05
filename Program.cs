@@ -12,9 +12,9 @@ using System.ServiceProcess;
 using System.Text;
 using System.Configuration.Install;  // ManagedInstallerClass etc
 using System.Reflection;  // Assembly etc
-
 namespace iedu
 {
+	
 	static class Program
 	{
 		/// <summary>

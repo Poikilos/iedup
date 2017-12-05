@@ -1,3 +1,4 @@
+[This code doesn't work. The kanst "WifiExample" doesn't work with the dll that results from compiling the conp1racy fork (drastic naming and namespace differences).]
 <https://github.com/consp1racy/NativeWifi>
 
 NativeWifi

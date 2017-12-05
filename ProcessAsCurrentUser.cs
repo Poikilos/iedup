@@ -1,3 +1,8 @@
+using System; //Int32, IntPtr, etc
+using System.Collections.Generic; //List etc
+using System.Runtime.InteropServices; //DllImport etc
+using System.Diagnostics; //Debug.Write* etc
+
 ///<summary>
 ///runs as active user (from Local System): such as for launching a screen capture tool
 ///by Michael Silver from <https://stackoverflow.com/questions/38752939/execute-program-capturing-screenshots-from-windows-service/45095509#45095509>. 14 Jul 2017. 30 Nov 2017.
