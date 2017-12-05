@@ -27,7 +27,7 @@ namespace iedu
 			// Here you can set properties on serviceProcessInstaller or register event handlers
 			serviceProcessInstaller.Account = ServiceAccount.LocalService;
 			
-			serviceInstaller.ServiceName = iedup.MyServiceName;
+			serviceInstaller.ServiceName = IEduP.MyServiceName;
 			this.Installers.AddRange(new Installer[] { serviceProcessInstaller, serviceInstaller });
 		}
 	}

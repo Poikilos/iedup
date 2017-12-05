@@ -47,6 +47,11 @@ namespace iedu
                                 ManagedInstallerClass.InstallHelper(new string[] { "/u", Assembly.GetExecutingAssembly().Location });
                                 break;
                             }
+                        case "-delete_self":
+                            {
+                    			IEdu.delete_self(5);
+                                break;
+                            }
                     }
                 }
             }
@@ -54,7 +59,7 @@ namespace iedu
             {
 				//ServiceBase.Run(new ServiceBase[] { new iedup() });
                 ServiceBase[] ServicesToRun;
-                ServicesToRun = new ServiceBase[] { new iedup() };
+                ServicesToRun = new ServiceBase[] { new IEduP() };
                 ServiceBase.Run(ServicesToRun);
             }			
 		}//end Main

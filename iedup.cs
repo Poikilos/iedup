@@ -28,7 +28,7 @@ using System.Web; //HttpContext.Request etc
 
 namespace iedu
 {
-	public class iedup : ServiceBase
+	public class IEduP : ServiceBase
 	{
 		public static string err = null;
 		public static string temp_d_path = null;
@@ -43,7 +43,7 @@ namespace iedu
 		public static string my_progdata_path = null;
 		public static string settings_path = null;
 		
-		public iedup()
+		public IEduP()
 		{
 			InitializeComponent();
 		}
