@@ -13,7 +13,7 @@
     <NoWin32Manifest>False</NoWin32Manifest>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <SignAssembly>True</SignAssembly>
-    <AssemblyOriginatorKeyFile>..\PublicPrivateKeyFile.snk</AssemblyOriginatorKeyFile>
+    <AssemblyOriginatorKeyFile>PublicPrivateKeyFile.snk</AssemblyOriginatorKeyFile>
     <DelaySign>False</DelaySign>
     <AssemblyOriginatorKeyMode>File</AssemblyOriginatorKeyMode>
   </PropertyGroup>

@@ -128,13 +128,14 @@ namespace iedu
 	                local_mac = wlanIface.NetworkInterface.GetPhysicalAddress().ToString(); //wlanIface.InterfaceGuid.ToString();
 	                if (!body.ContainsKey("MAC")) body.Add("MAC", local_mac);
 	                
-	                Wlan.WlanBssEntry[] wlanBssEntries = wlanIface.GetNetworkBssList();
-	                foreach (Wlan.WlanBssEntry network in wlanBssEntries)
+	                Wlan.WlanBssEntryN[] wlanBssEntries = wlanIface.GetNetworkBssList();
+	                foreach (Wlan.WlanBssEntryN network in wlanBssEntries)
 	                {
 	                    string prefix = "remotewifi_i_"+collected_count.ToString()+"_";
-	                    int rss = network.rssi;
+	                    int rss = network.BaseEntry.rssi;
+	                    //TODO: check network.IEs too
 	                    //     MessageBox.Show(rss.ToString());
-	                    byte[] remote_mac_bytes = network.dot11Bssid;
+	                    byte[] remote_mac_bytes = network.BaseEntry.dot11Bssid;
 	
 	                    string remote_mac_s = "";
 	
@@ -143,9 +144,9 @@ namespace iedu
 	                    }
 	                    
 						body.Add(prefix + "MAC", remote_mac_s);
-	                    body.Add(prefix + "SSID", System.Text.ASCIIEncoding.ASCII.GetString(network.dot11Ssid.SSID).ToString().Trim(badchars));
-	                    body.Add(prefix + "signal_percent", network.linkQuality.ToString());
-	                    body.Add(prefix + "type", network.dot11BssType.ToString());
+	                    body.Add(prefix + "SSID", System.Text.ASCIIEncoding.ASCII.GetString(network.BaseEntry.dot11Ssid.SSID).ToString().Trim(badchars));
+	                    body.Add(prefix + "signal_percent", network.BaseEntry.linkQuality.ToString());
+	                    body.Add(prefix + "type", network.BaseEntry.dot11BssType.ToString());
 	                    body.Add(prefix + "RSSID", rss.ToString());
 	                    collected_count++;
 	                }//end for remote nodes
