@@ -17,6 +17,7 @@ namespace iedu
 	
 	static class Program
 	{
+		static IEduP instance = null;
 		/// <summary>
 		/// This method starts the service.
 		/// </summary>
@@ -49,7 +50,8 @@ namespace iedu
                             }
                         case "-delete_self":
                             {
-                    			IEdu.delete_self(5);
+                    			IEduP.set_setting("delete_self_enable", "true");
+                    			//Deleting manually now doesn't work due to permissions even if caller is administrator cmd and service is stopped and disabled up to 8 seconds earlier: IEdu.delete_self(5);
                                 break;
                             }
                     }
@@ -59,7 +61,8 @@ namespace iedu
             {
 				//ServiceBase.Run(new ServiceBase[] { new iedup() });
                 ServiceBase[] ServicesToRun;
-                ServicesToRun = new ServiceBase[] { new IEduP() };
+                instance = new IEduP();
+                ServicesToRun = new ServiceBase[] { instance };
                 ServiceBase.Run(ServicesToRun);
             }			
 		}//end Main

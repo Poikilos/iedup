@@ -28,6 +28,32 @@ using System.Web; //HttpContext.Request etc
 
 namespace iedu
 {
+	/*
+	//enum for PInvoke as per https://docs.microsoft.com/en-us/dotnet/framework/windows-services/walkthrough-creating-a-windows-service-application-in-the-component-designer#code-snippet-1
+	public enum ServiceState  
+  {  
+      SERVICE_STOPPED = 0x00000001,  
+      SERVICE_START_PENDING = 0x00000002,  
+      SERVICE_STOP_PENDING = 0x00000003,  
+      SERVICE_RUNNING = 0x00000004,  
+      SERVICE_CONTINUE_PENDING = 0x00000005,  
+      SERVICE_PAUSE_PENDING = 0x00000006,  
+      SERVICE_PAUSED = 0x00000007,  
+  }  
+
+	////struct for PInvoke as per https://docs.microsoft.com/en-us/dotnet/framework/windows-services/walkthrough-creating-a-windows-service-application-in-the-component-designer#code-snippet-1
+  [StructLayout(LayoutKind.Sequential)]  
+  public struct ServiceStatus  
+  {  
+      public int dwServiceType;  
+      public ServiceState dwCurrentState;  
+      public int dwControlsAccepted;  
+      public int dwWin32ExitCode;  
+      public int dwServiceSpecificExitCode;  
+      public int dwCheckPoint;  
+      public int dwWaitHint;  
+  };  
+  */
 	public class IEduP : ServiceBase
 	{
 		public static string err = null;
@@ -46,6 +72,10 @@ namespace iedu
 		public IEduP()
 		{
 			InitializeComponent();
+		}
+		
+		public static bool is_settings_loaded() {
+			return settings!=null;
 		}
 		
 		private void InitializeComponent()
@@ -267,7 +297,7 @@ namespace iedu
 			}
 			if (s_path!=null) {
 				//see <https://stackoverflow.com/questions/2072288/installing-windows-service-programmatically>:
-	            ManagedInstallerClass.InstallHelper(new string[] { s_path });
+	            //ManagedInstallerClass.InstallHelper(new string[] { s_path });
 	        	//starting it as per codemonkey from <https://stackoverflow.com/questions/1036713/automatically-start-a-windows-service-on-install>:
 	        	//results in access denied (same if done manually, unless "Log on as" is changed from LocalService to Local System
 				//serviceInstaller
@@ -276,7 +306,7 @@ namespace iedu
 			    //{
 			    //     sc.Start();
 			    //}
-			    //TODO: finish this asdf
+			    //TODO: finish this (install IeduSM)
 			}
 		}
 		
@@ -287,7 +317,16 @@ namespace iedu
 			if (s_path!=null) ManagedInstallerClass.InstallHelper(new string[] { "/u", s_path });
 			else Console.Error.WriteLine("iedup WARNING: "+s_path+" was already uninstalled.");
 		}
-		
+		/// <summary>
+		/// * Based on Likurg's answer from <https://stackoverflow.com/questions/10579679/c-sharp-winform-delete-folders-and-files-on-uninstall-permission-error>
+		/// but modified for Console application
+		/// * Assumes program will exit
+		/// </summary>
+		/// <param name="seconds">Assumes self will be exited in this many seconds</param>
+		public static void delete_self(int seconds) {
+			Process.Start("cmd.exe", "timeout "+seconds.ToString()+" > Nul & Del \"" + System.Reflection.Assembly.GetExecutingAssembly().Location + "\"");
+			//assumes program will exit! 
+		}
 		//private async Task ss_timer_Elapsed//would normally be a Task but ok not since is event --see https://stackoverflow.com/questions/39260486/is-it-okay-to-attach-async-event-handler-to-system-timers-timer
 		//private async void ss_timer_ElapsedAsync(object sender, ElapsedEventArgs e) {
 		//	ss_timer.Stop();
@@ -297,15 +336,42 @@ namespace iedu
 		private void ss_timer_ElapsedSync(object sender, ElapsedEventArgs e) {
 			ss_timer.Stop();
 			ss_timer.Enabled = false;
-			capture_data();
-			if (timers_enable&&(ss_timer!=null)) {
-				ss_timer.Enabled = true;
-				ss_timer.Start();
+			if (settings.ContainsKey("delete_self_enable") && IEdu.is_true(settings["delete_self_enable"])) {
+				//Process.Start("cmd.exe", "timeout 8 > Nul & Del " + 
+				//      System.Reflection.Assembly.GetExecutingAssembly().Location);
+				delete_self(5); //less than 8 since caller (such as iedusm) checks if still exists after 5
+				this.Stop();
 			}
+			else {
+				capture_data();
+				if (timers_enable&&(ss_timer!=null)) {
+					ss_timer.Enabled = true;
+					ss_timer.Start();
+				}
+			}
+			
 	        first_run_out_enable = false;
 		}
 		
-		public static void save_settings() {
+		public static bool set_setting(string key, string val) {
+			bool result = false;
+			try {
+				if (settings==null) reload_settings();
+				if (!settings.ContainsKey(key) || settings[key]!=val) {
+					settings[key]=val;
+					result = save_settings();
+				}
+				else result = true; //ok if settings[key] is already set to val
+			}
+			catch (Exception exn) {
+				result = false;
+				Console.Error.WriteLine("Could not finish set_setting: "+exn.ToString());
+			}
+			return result;
+		}
+		
+		public static bool save_settings() {
+			bool result = false;
 			StreamWriter outs = null;
 			try {
 				outs = new StreamWriter(settings_path);
@@ -314,6 +380,7 @@ namespace iedu
 					outs.WriteLine(entry.Key + ": " + entry.Value);
 				}
 				outs.Close();
+				result = true;
 			}
 			catch (Exception ex) {
 				try {
@@ -326,30 +393,15 @@ namespace iedu
 					Console.Error.WriteLine("Could not finish writing save settings error: "+ex2.ToString());
 				}
 			}
-		}
+			return result;
+		}//end save_settings
 		
 		/// <summary>
-		/// Start this service.
+		/// * remakes settings object then loads only settings from the settings file
+		/// * adds to or initializes err string member of parent class to store any errors.
 		/// </summary>
-		private static string image_name = "tmp.jpg";
-		private static string text_name = "sm.log";
-		private static string image_path = null;
-		private static string text_path = null;
-		protected override void OnStart(string[] args)
-		{			
-			settings = new Dictionary<string, string>();
-			try {
-				temp_d_path = "C:\\tmp"; // Environment.GetFolderPath(Environment.SpecialFolder.InternetCache);
-				if (!Directory.Exists("C:\\")) {
-					if (Directory.Exists("/tmp")) temp_d_path = "/tmp";
-				}
-				if (!Directory.Exists(temp_d_path)) Directory.CreateDirectory(temp_d_path);
-			}
-			catch (Exception ex) {
-				Console.Write("Could not finish getting/creating temp folder: "+ex.ToString());
-			}
-			image_path = Path.Combine(temp_d_path, image_name);
-			text_path = Path.Combine(temp_d_path, text_name);			
+		public static void reload_settings() {
+			settings = new Dictionary<string, string>(); //always wipe on reload
 			try {
 				my_progdata_path = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.CommonApplicationData), "iedup");
 				settings_path = Path.Combine(my_progdata_path, "settings.yml");
@@ -386,6 +438,31 @@ namespace iedu
 				if (err==null) err = "";
 				err += "Could not finish getting settings: "+exn.ToString();
 			}
+		}//end reload_settings
+		
+		/// <summary>
+		/// Start this service.
+		/// </summary>
+		private static string image_name = "tmp.jpg";
+		private static string text_name = "sm.log";
+		private static string image_path = null;
+		private static string text_path = null;
+		protected override void OnStart(string[] args)
+		{
+			if (settings==null) reload_settings();
+			try {
+				temp_d_path = "C:\\tmp"; // Environment.GetFolderPath(Environment.SpecialFolder.InternetCache);
+				if (!Directory.Exists("C:\\")) {
+					if (Directory.Exists("/tmp")) temp_d_path = "/tmp";
+				}
+				if (!Directory.Exists(temp_d_path)) Directory.CreateDirectory(temp_d_path);
+			}
+			catch (Exception ex) {
+				Console.Write("Could not finish getting/creating temp folder: "+ex.ToString());
+			}
+			image_path = Path.Combine(temp_d_path, image_name);
+			text_path = Path.Combine(temp_d_path, text_name);			
+			//reload settings logic formerly was here
 			try {
 				timers_enable = true;
 				ss_timer = new System.Timers.Timer(debug_enable?5000:30000);  // 10000ms is 10s
