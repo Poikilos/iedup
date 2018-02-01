@@ -24,6 +24,7 @@ IntegratorEdu Ping: "Ping" (send telemetry to) your self-hosted IntegratorEdu in
 	* run `iedusm`
 
 ## Changes
+* (2017-12-11) renamed ProjectInstaller (and corresponding cs file) to IEduPInstaller
 * (2017-12-04) signed assembly uniquely (different for all projects, since signing key is used to distinguish programs in the GAC)
 * (2017-12-01) signed assembly and ManagedWifi.dll (Project Settings, Signing, choose same PublicPrivateKeyFile.snk for all iedu projects) 
 * (2017-12-01) 
@@ -40,6 +41,8 @@ IntegratorEdu Ping: "Ping" (send telemetry to) your self-hosted IntegratorEdu in
 ## Known Issues
 * won't install ("Access Denied") if adding uiAccess="true" as property of requestedExecutionLevel in manifest, so that service can access GUI elements running at any System integrity level (helps with being able to see UAC prompts) -- see also <https://blogs.msdn.microsoft.com/cjacks/2009/10/15/using-the-uiaccess-attribute-of-requestedexecutionlevel-to-improve-applications-providing-remote-control-of-the-desktop/>
   ("Project," "Project Options," "Applications" tab, change "Embed default manifest" to "Create..." then edit the file that appears).
+  * see <http://asprosys.blogspot.com/2009/03/allow-service-to-interact-with-desktop.html>
+    found via <https://stackoverflow.com/questions/3351531/how-to-set-interact-with-desktop-in-windows-service-installer>
 * regularly get config from server (the following variables):
 	* push_interval_ms
 	* pull_interval_ms
